@@ -1,0 +1,13 @@
+export const respond = (res, payload, code, error, success = true, status = 200) => {
+    const responseObj = { success };
+
+    if(payload)
+        responseObj.payload = payload;
+
+    if(code) {
+        responseObj.code = code;
+        responseObj.error = error;
+    }
+
+    res.status(status).json(responseObj);
+}
