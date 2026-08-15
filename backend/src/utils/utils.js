@@ -51,3 +51,13 @@ export const normalizeMySQLSchema = (connectionId, columns, relations) => {
 
     return result;
 }
+
+export const constructQuery = (query, context) => {
+    return `
+Query
+${query}
+
+SCHEMA:
+${context}
+`;
+};

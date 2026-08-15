@@ -1,5 +1,5 @@
 import express from 'express';
-import { handleConnection } from '../controller/controller.js';
+import { handleConnection, handleConversation, setupConversation } from '../controller/controller.js';
 import { respond } from '../utils/response.js';
 
 const router = express.Router();
@@ -20,16 +20,37 @@ router.post('/connection', async (req, res) => {
     }
 });
 
-// router.post('/chat', async (req, res) => {
-//     try {
-//         const msg = req.body.message;
-//         const convId = randomUUID();
-//         cacheController.set(convId, JSON.stringify([ { role: 'user', content: msg } ]));
-//         res.json({ success: true, payload: { convId } });
-//     } catch (err) {
-//         console.log('Error ==>', err);
-//         res.status(500).json({ success: false, code: '500', error: 'Error while starting conversation' });
-//     }
-// });
+router.post('/conversation/:connectionId', async (req, res) => {
+    try {
+        const connectionId = req.params.connectionId;
+
+        const response = await setupConversation(req, connectionId);
+        if(response.code) {
+            respond(res, undefined, response.code, response.message, false, 400);
+        } else {
+            respond(res, response);
+        }
+    } catch (err) {
+        console.log('Error ==>', err);
+        respond(res, undefined, '500', 'Internal server error', false, 500);
+    }
+});
+
+router.patch('/conversation/:connectionId/:conversationId', async (req, res) => {
+    try {
+        const { connectionId, conversationId } = req.params;
+        const { query } = req.body;
+
+        const response = await handleConversation(req, connectionId, conversationId, query);
+        if(response.code) {
+            respond(res, undefined, response.code, response.message, false, 400);
+        } else {
+            respond(res, response);
+        }
+    } catch (err) {
+        console.log('Error ==>', err);
+        respond(res, undefined, '500', 'Internal server error', false, 500);
+    }
+});
 
 export default router;
