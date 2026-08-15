@@ -1,9 +1,10 @@
 import { cacheController } from "../cache/cache-controller.js"
 import { randomUUID } from 'node:crypto';
 import { Databases } from "../utils/constants.js";
-import { MySqlAdapter } from "../database/mysql.js";
+import { MySqlAdapter } from "../connectors/mysql.js";
 import { normalizeMySQLSchema } from "../utils/utils.js";
 import { getEmbedder } from "../utils/embedder.js";
+import { client } from "../database/qdrant.js";
 
 /**
  * @param {*} req 
@@ -49,8 +50,34 @@ async function handleMySql(req, connectionId, connectionDetails) {
             normalize: true, // Change the magnitude/length of vector without changing it's direction
             pooling: 'mean' // Converts token vectors into a single vector
         });
-        console.log(embedding.data);
+
+        record.embeddingVector = embedding.data;
     }
+
+    const collectionExists = await client.collectionExists(connectionId);
+    if(!collectionExists.exists) {
+        await client.createCollection(connectionId, {
+            vectors: {
+                size: 384,
+                distance: 'Dot'
+            }
+        });
+    }
+
+    const opResult = await client.upsert(connectionId, {
+        wait: true,
+        points: embeddingData.map(embedding => {
+            return {
+                id: randomUUID(),
+                vector: Array.from(embedding.embeddingVector),
+                payload: {
+                    table: embedding.tableName,
+                    embeddingStr: embedding.embeddingStr
+                }
+            }
+        })
+    });
+    console.log(opResult);
 
     return { success: true };
 }

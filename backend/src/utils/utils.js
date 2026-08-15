@@ -10,7 +10,7 @@ ${relations ? 'RELATIONS:' : ''}
 ${relations ? relations : ''}`;
 }
 
-export const normalizeMySQLSchema = (conversationId, columns, relations) => {
+export const normalizeMySQLSchema = (connectionId, columns, relations) => {
     const result = [];
     const map = new Map();
 
@@ -32,7 +32,7 @@ export const normalizeMySQLSchema = (conversationId, columns, relations) => {
     }
 
     for(let [ key, value ] of map.entries()) {
-        const temp = { tableName: key, conversationId };
+        const temp = { tableName: key };
         const columns = value.columns;
         const relations = value.relations;
         
