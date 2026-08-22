@@ -1,8 +1,8 @@
-export const respond = (res, payload, code, error, success = true, status = 200) => {
+export const respond = (res, data, code, error, success = true, status = 200) => {
     const responseObj = { success };
 
-    if(payload)
-        responseObj.payload = payload;
+    if(data)
+        responseObj.data = data;
 
     if(code) {
         responseObj.code = code;

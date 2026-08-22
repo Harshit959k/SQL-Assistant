@@ -7,6 +7,14 @@ import { getEmbedder } from "../utils/embedder.js";
 import { client } from "../database/qdrant.js";
 import { getClient } from "../llm/llm.js";
 
+export const getConnection = async (req, connectionId) => {
+    let connection = cacheController.get(connectionId);
+    if(!connection) throw new Error('Connection does not exist');
+    connection = JSON.parse(connection);
+
+    return { host: connection.host, port: connection.port, database: connection.database };
+}
+
 /**
  * @param {*} req 
  * @param {{ type: string, host: string, port: string, username: string, password: string, database: string }} connectionDetails 
@@ -123,11 +131,11 @@ async function handleMySql(req, connectionId, connectionDetails) {
 
     const result = await connHandler.getSchema();
 
-    const embeddingData = normalizeMySQLSchema(connectionId, result.columns, result.relations);
-    // console.log("embeddingData ==>", embeddingData);
+    const schema = normalizeMySQLSchema(connectionId, result.columns, result.relations);
+    // console.log("schema ==>", schema);
 
     const embedder = await getEmbedder();
-    for(let record of embeddingData) {
+    for(let record of schema) {
         const embedding = await embedder(record.embeddingStr, {
             normalize: true, // Change the magnitude/length of vector without changing it's direction
             pooling: 'mean' // Converts token vectors into a single vector
@@ -148,7 +156,7 @@ async function handleMySql(req, connectionId, connectionDetails) {
 
     const opResult = await client.upsert(connectionId, {
         wait: true,
-        points: embeddingData.map(embedding => {
+        points: schema.map(embedding => {
             return {
                 id: randomUUID(),
                 vector: Array.from(embedding.embeddingVector),
