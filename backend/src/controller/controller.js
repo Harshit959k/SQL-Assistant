@@ -69,7 +69,7 @@ export const setupConversation = async (req, connectionId) => {
  */
 export async function* handleConversation (req, connectionId, conversationId, query) {
     let conversation = cacheController.get(`${connectionId}:${conversationId}`);
-    // if(!conversation)
+    if(!conversation)
         throw new Error('Invalid conversation');
 
     conversation = JSON.parse(conversation);
