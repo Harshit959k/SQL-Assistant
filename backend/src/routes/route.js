@@ -55,16 +55,21 @@ router.patch('/conversations/:connectionId/:conversationId', async (req, res) =>
     try {
         const { connectionId, conversationId } = req.params;
         const { query } = req.body;
+        res.set({
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive'
+        });
+        res.flushHeaders();
 
-        const response = await handleConversation(req, connectionId, conversationId, query);
-        if(response.code) {
-            respond(res, undefined, response.code, response.message, false, 400);
-        } else {
-            respond(res, response);
+        for await (const chunk of handleConversation(req, connectionId, conversationId, query)) {
+            res.write(`data: ${chunk}\n\n`);
         }
     } catch (err) {
         console.log('Error ==>', err);
-        respond(res, undefined, '500', 'Internal server error', false, 500);
+        res.write(`data: ${JSON.stringify({ status: 500, message: 'Internal Error' })}\n\n`);
+    } finally {
+        res.end();
     }
 });
 

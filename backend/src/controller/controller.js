@@ -67,14 +67,10 @@ export const setupConversation = async (req, connectionId) => {
  * @param {string | undefined} conversationId 
  * @param {string} query
  */
-export const handleConversation = async (req, connectionId, conversationId, query) => {
+export async function* handleConversation (req, connectionId, conversationId, query) {
     let conversation = cacheController.get(`${connectionId}:${conversationId}`);
-    if(!conversation) {
-        return {
-            code: '39',
-            message: 'Invalid conversation'
-        }
-    }
+    // if(!conversation)
+        throw new Error('Invalid conversation');
 
     conversation = JSON.parse(conversation);
 
@@ -101,9 +97,17 @@ export const handleConversation = async (req, connectionId, conversationId, quer
                 role: 'user',
                 content: constructedQuery
             }
-        ]
+        ],
+        stream: true
     });
-    const outputMessage = response.choices[0].message.content;
+
+    let outputMessage = '';
+    for await (let chunk of response) {
+        if(chunk.choices[0].delta.content) {
+            outputMessage += chunk.choices[0].delta.content;
+            yield chunk.choices[0].delta.content;
+        }
+    }
 
     conversation.push({
         role: 'user',
@@ -115,7 +119,7 @@ export const handleConversation = async (req, connectionId, conversationId, quer
     });
 
     cacheController.set(`${connectionId}:${conversationId}`, JSON.stringify(conversation));
-    return { response: { outputMessage } };
+    return JSON.stringify({ done: true });
 }
 
 async function handleMySql(req, connectionId, connectionDetails) {
