@@ -7,8 +7,9 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import { Separator } from "~/components/ui/separator";
 import { toast } from "~/components/ui/toast";
 
-import { getConnection as getConnectionDetails, initializeConversation } from '../utils/api';
+import { converse, getConnection as getConnectionDetails, initializeConversation } from '../utils/api';
 import { useLocation } from 'react-router';
+import type { ConversationRecord } from "~/utils/interface";
 
 export default function DatabaseChatPage() {
   const location = useLocation();
@@ -19,6 +20,8 @@ export default function DatabaseChatPage() {
     port: '-',
     database: '-'
   });
+  const [ conversation, setConversation ] = useState<ConversationRecord[]>([]);
+  const [ input, setInput ] = useState('');
 
   useEffect(() => {
     getConnection();
@@ -54,12 +57,71 @@ export default function DatabaseChatPage() {
         return;
 
       const response = await initializeConversation(connectionId);
-      if(response.success)
+      if(response.success) {
         setConversationId(response.data.conversationId);
+        setConversation([
+          {
+            content:
+              "Hello! I'm connected to your database. What would you like to know?",
+            role: "assistant",
+          },
+        ])
+      }
     } catch (err) {
       console.log('err ===>', err);
     }
   }
+
+  const handleUserMessage = async () => {
+    if (!input.trim()) return;
+
+    const userQuery = input;
+    setInput('');
+
+    setConversation(prev => [
+      ...prev,
+      {
+        role: 'user',
+        content: userQuery,
+      },
+    ]);
+
+    try {
+      const body = { query: userQuery };
+      const response = converse(connectionId, conversationId, body);
+      let assistantStarted = false;
+
+      for await (const chunk of response) {
+        setConversation(prev => {
+          if (!assistantStarted) {
+            assistantStarted = true;
+
+            return [
+              ...prev,
+              {
+                role: 'assistant',
+                content: chunk,
+              },
+            ];
+          }
+
+          const updated = [...prev];
+          const lastMessage = updated[updated.length - 1];
+
+          if (lastMessage?.role === 'assistant') {
+            updated[updated.length - 1] = {
+              ...lastMessage,
+              content: lastMessage.content + chunk,
+            };
+          }
+
+          return updated;
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
   
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -102,47 +164,13 @@ export default function DatabaseChatPage() {
       {/* Chat */}
       <ScrollArea className="min-h-0 flex-1">
         <div className="mx-auto max-w-3xl space-y-6 px-6 py-8">
-          {/* AI Message */}
-          {/* <div className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <Database className="h-4 w-4" />
-            </div>
-
-            <div className="rounded-lg bg-muted px-4 py-3 text-sm">
-              Hello! I'm connected to your database. What would you like
-              to know?
-            </div>
-          </div> */}
-
-          {/* User Message */}
-          {/* <div className="flex justify-end">
-            <div className="max-w-xl rounded-lg bg-primary px-4 py-3 text-sm text-primary-foreground">
-              Show me the top 5 customers by total order value.
-            </div>
-          </div> */}
-
-          {/* AI Response */}
-          {/* <div className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <Database className="h-4 w-4" />
-            </div>
-
-            <div className="max-w-2xl rounded-lg bg-muted px-4 py-3 text-sm">
-              Here are the top 5 customers based on their total order value.
-
-              <div className="mt-3 overflow-hidden rounded-md border bg-background">
-                <pre className="overflow-x-auto p-4 text-xs">
-{`SELECT
-  customer_id,
-  SUM(total_amount) AS total_value
-FROM orders
-GROUP BY customer_id
-ORDER BY total_value DESC
-LIMIT 5;`}
-                </pre>
-              </div>
-            </div>
-          </div> */}
+          {
+            conversation.map(record => {
+              return <>
+                { record.role === 'assistant' ? <AIMessage content={record.content} /> : <UserMessage content={record.content} /> }
+              </>
+            })
+          }
         </div>
       </ScrollArea>
 
@@ -153,11 +181,15 @@ LIMIT 5;`}
             <Input
               placeholder="Ask anything about your database..."
               className="h-12 pr-12"
+              value={input}
+              onChange={e => setInput(e.target.value) }
             />
 
             <Button
               size="icon"
               className="absolute right-1.5 top-1.5 h-9 w-9"
+              onClick={handleUserMessage}
+              disabled={!input}
             >
               <Send className="h-4 w-4" />
             </Button>
@@ -166,4 +198,28 @@ LIMIT 5;`}
       </div>
     </div>
   );
+}
+
+function AIMessage({ content }: { content: string }) {
+  return <>
+    <div className="flex gap-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <Database className="h-4 w-4" />
+      </div>
+
+      <div className="rounded-lg bg-muted px-4 py-3 text-sm">
+        { content }
+      </div>
+    </div>
+  </>
+}
+
+function UserMessage({ content }: { content: string }) {
+  return <>
+    <div className="flex justify-end">
+      <div className="max-w-xl rounded-lg bg-primary px-4 py-3 text-sm text-primary-foreground">
+        { content }
+      </div>
+    </div>
+  </>
 }

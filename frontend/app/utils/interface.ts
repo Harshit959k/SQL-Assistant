@@ -25,3 +25,8 @@ export interface GetConnectionResponse {
     port: string;
     database: string;
 }
+
+export interface ConversationRecord {
+    content: string;
+    role: 'assistant' | 'user';
+}
