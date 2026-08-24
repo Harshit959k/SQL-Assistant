@@ -1,6 +1,7 @@
 import express from 'express';
 import { getConnection, handleConnection, handleConversation, setupConversation } from '../controller/controller.js';
 import { respond } from '../utils/response.js';
+import { AppError } from '../utils/AppError.js';
 
 const router = express.Router();
 
@@ -8,14 +9,14 @@ router.get('/connections/:connectionId', async (req, res) => {
     try {
         const connectionId = req.params.connectionId;
         const response = await getConnection(req, connectionId);
-        if(response.code) {
-            respond(res, undefined, response.code, response.message, false, 400);
-        } else {
-            respond(res, response);
-        }
+        respond(res, response);
     } catch (err) {
         console.log('Error ==>', err);
-        respond(res, undefined, '500', 'Internal server error', false, 500);
+        if(err instanceof AppError) {
+            respond(res, undefined, err.code, err.message, false, 400);
+        } else {
+            respond(res, undefined, '500', 'Internal server error', false, 500);
+        }
     }
 });
 
@@ -24,14 +25,14 @@ router.post('/connections', async (req, res) => {
         const connectionDetails = req.body;
 
         const response = await handleConnection(req, connectionDetails);
-        if(response.code) {
-            respond(res, undefined, response.code, response.message, false, 400);
-        } else {
-            respond(res, response);
-        }
+        respond(res, response);
     } catch (err) {
         console.log('Error ==>', err);
-        respond(res, undefined, '500', 'Internal server error', false, 500);
+        if(err instanceof AppError) {
+            respond(res, undefined, err.code, err.message, false, 400);
+        } else {
+            respond(res, undefined, '500', 'Internal server error', false, 500);
+        }
     }
 });
 
@@ -40,14 +41,14 @@ router.post('/conversations/:connectionId', async (req, res) => {
         const connectionId = req.params.connectionId;
 
         const response = await setupConversation(req, connectionId);
-        if(response.code) {
-            respond(res, undefined, response.code, response.message, false, 400);
-        } else {
-            respond(res, response);
-        }
+        respond(res, response);
     } catch (err) {
         console.log('Error ==>', err);
-        respond(res, undefined, '500', 'Internal server error', false, 500);
+        if(err instanceof AppError) {
+            respond(res, undefined, err.code, err.message, false, 400);
+        } else {
+            respond(res, undefined, '500', 'Internal server error', false, 500);
+        }
     }
 });
 
@@ -67,7 +68,11 @@ router.patch('/conversations/:connectionId/:conversationId', async (req, res) =>
         }
     } catch (err) {
         console.log('Error ==>', err);
-        res.write(`data: ${JSON.stringify({ status: 500, message: 'Internal Error' })}\n\n`);
+        if(err instanceof AppError) {
+            res.write(`data: ${JSON.stringify({ status: err.code, message: err.message })}\n\n`);
+        } else {
+            res.write(`data: ${JSON.stringify({ status: 500, message: 'Internal Error' })}\n\n`);
+        }
     } finally {
         res.end();
     }

@@ -6,10 +6,11 @@ import { constructQuery, normalizeMySQLSchema } from "../utils/utils.js";
 import { getEmbedder } from "../utils/embedder.js";
 import { client } from "../database/qdrant.js";
 import { getClient } from "../llm/llm.js";
+import { AppError } from "../utils/AppError.js";
 
 export const getConnection = async (req, connectionId) => {
     let connection = cacheController.get(connectionId);
-    if(!connection) throw new Error('Connection does not exist');
+    if(!connection) throw new AppError('Connection does not exist', '58');
     connection = JSON.parse(connection);
 
     return { host: connection.host, port: connection.port, database: connection.database };
@@ -29,7 +30,7 @@ export const handleConnection = async (req, connectionDetails) => {
             dbHandler = handleMySql;
             break;
         default:
-            throw new Error('Invalid database type');
+            throw new AppError('Invalid database type', '58');
     }
 
     const result = await dbHandler(req, connectionId, connectionDetails);
@@ -44,10 +45,7 @@ export const handleConnection = async (req, connectionDetails) => {
 export const setupConversation = async (req, connectionId) => {
     const connection = cacheController.get(connectionId);
     if(!connection) {
-        return {
-            code: '39',
-            message: 'No connection found'
-        };
+        throw new AppError('No connection found', '58');
     }
 
     const conversationId = randomUUID();
@@ -70,7 +68,7 @@ export const setupConversation = async (req, connectionId) => {
 export async function* handleConversation (req, connectionId, conversationId, query) {
     let conversation = cacheController.get(`${connectionId}:${conversationId}`);
     if(!conversation)
-        throw new Error('Invalid conversation');
+        throw new AppError('Invalid conversation', '58');
 
     conversation = JSON.parse(conversation);
 
@@ -171,7 +169,6 @@ async function handleMySql(req, connectionId, connectionDetails) {
             }
         })
     });
-    console.log(opResult);
 
     return { success: true };
 }
