@@ -11,6 +11,10 @@ import { converse, getConnection as getConnectionDetails, initializeConversation
 import { useLocation } from 'react-router';
 import type { ConversationRecord } from "~/utils/interface";
 
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+
 export default function DatabaseChatPage() {
   const location = useLocation();
   const [ connectionId, setConnectionId ] = useState(location.state?.connectionId || '');
@@ -207,8 +211,10 @@ function AIMessage({ content }: { content: string }) {
         <Database className="h-4 w-4" />
       </div>
 
-      <div className="rounded-lg bg-muted px-4 py-3 text-sm">
-        { content }
+      <div className="prose prose-sm dark:prose-invert max-w-4/5">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {content}
+        </ReactMarkdown>
       </div>
     </div>
   </>
