@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { AppError } from '../utils/AppError';
+import { AppError } from '../utils/AppError.js';
 
 const { Client } = pg;
 

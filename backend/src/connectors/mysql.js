@@ -1,5 +1,5 @@
 import mysql2 from 'mysql2/promise';
-import { AppError } from '../utils/AppError';
+import { AppError } from '../utils/AppError.js';
 
 export class MySqlAdapter {
     constructor() {
