@@ -2,12 +2,13 @@ import { cacheController } from "../cache/cache-controller.js"
 import { randomUUID } from 'node:crypto';
 import { Databases, SYSTEM_PROMPT } from "../utils/constants.js";
 import { MySqlAdapter } from "../connectors/mysql.js";
-import { constructQuery, normalizeMySQLSchema } from "../utils/utils.js";
+import { constructQuery, normalizeSchema } from "../utils/utils.js";
 import { getEmbedder } from "../utils/embedder.js";
 import { client } from "../database/qdrant.js";
 import { getClient } from "../llm/llm.js";
 import { AppError } from "../utils/AppError.js";
 import { redis } from "../cache/redis.js";
+import { PostgresAdapter } from "../connectors/postgres.js";
 
 export const getConnection = async (req, connectionId) => {
     let connection = await cacheController.get(connectionId, redis);
@@ -28,7 +29,8 @@ export const handleConnection = async (req, connectionDetails) => {
     let dbHandler;
     switch (connectionDetails.type?.toLowerCase()) {
         case Databases.mysql:
-            dbHandler = handleMySql;
+        case Databases.postgres:
+            dbHandler = handleSql;
             break;
         default:
             throw new AppError('Invalid database type', '58');
@@ -86,7 +88,6 @@ export async function* handleConversation (req, connectionId, conversationId, qu
     });
 
     const constructedQuery = constructQuery(query, queryResult.points.map(elem => elem.payload.embeddingStr).join('\n\n'));
-
     const llmClient = getClient();
     const response = await llmClient.chat.completions.create({
         model: "gemini-3.5-flash",
@@ -121,22 +122,32 @@ export async function* handleConversation (req, connectionId, conversationId, qu
     return JSON.stringify({ done: true });
 }
 
-async function handleMySql(req, connectionId, connectionDetails) {
-    const connHandler = new MySqlAdapter();
+const adapters = {
+    mysql: () => new MySqlAdapter(),
+    postgres: () => new PostgresAdapter(),
+};
+ 
+function toCredentials(type, details) {
+    const base = {
+        host: details.host,
+        port: details.port,
+        user: details.username,
+        password: details.password,
+        database: details.database,
+    };
+ 
+    if (type === Databases.postgres) base.schema = details.schema || 'public';
+ 
+    return base;
+}
 
-    await connHandler.connect({
-        host: connectionDetails.host,
-        port: connectionDetails.port,
-        user: connectionDetails.username,
-        password: connectionDetails.password,
-        database: connectionDetails.database
-    });
-
+async function handleSql(req, connectionId, connectionDetails) {
+    const type = connectionDetails.type?.toLowerCase();
+    const createAdapter = adapters[type];
+    const connHandler = createAdapter();
+    await connHandler.connect(toCredentials(type, connectionDetails));
     const result = await connHandler.getSchema();
-
-    const schema = normalizeMySQLSchema(connectionId, result.columns, result.relations);
-    // console.log("schema ==>", schema);
-
+    const schema = normalizeSchema(connectionId, result.columns, result.relations);
     const embedder = await getEmbedder();
     for(let record of schema) {
         const embedding = await embedder(record.embeddingStr, {
@@ -170,6 +181,8 @@ async function handleMySql(req, connectionId, connectionDetails) {
             }
         })
     });
+
+    await connHandler.close();
 
     return { success: true };
 }

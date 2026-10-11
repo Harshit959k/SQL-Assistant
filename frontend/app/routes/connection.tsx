@@ -84,6 +84,7 @@ export default function DatabaseConnectionPage() {
 
                     <SelectContent>
                       <SelectItem value="mysql">MySQL</SelectItem>
+                      <SelectItem value="postgres">Postgres</SelectItem>
                     </SelectContent>
                   </Select>
                 </>
