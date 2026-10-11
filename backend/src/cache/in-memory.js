@@ -7,7 +7,7 @@ export const inMemory = {
      * @param {string} key 
      * @returns {*}
      */
-    get: (key) => {
+    get: async (key) => {
         return cache.get(key);
     },
     /**
@@ -16,14 +16,14 @@ export const inMemory = {
      * @param {number} ttl TTL in seconds 
      * @returns {boolean}
      */
-    set: (key, value, ttl) => {
+    set: async (key, value, ttl) => {
         return cache.set(key, value, ttl);
     },
     /**
      * @param {string} key 
      * @returns {number}
      */
-    delete: (key) => {
+    delete: async (key) => {
         return cache.del(key);
     }
 };

@@ -7,9 +7,10 @@ import { getEmbedder } from "../utils/embedder.js";
 import { client } from "../database/qdrant.js";
 import { getClient } from "../llm/llm.js";
 import { AppError } from "../utils/AppError.js";
+import { redis } from "../cache/redis.js";
 
 export const getConnection = async (req, connectionId) => {
-    let connection = cacheController.get(connectionId);
+    let connection = await cacheController.get(connectionId, redis);
     if(!connection) throw new AppError('Connection does not exist', '58');
     connection = JSON.parse(connection);
 
@@ -22,7 +23,7 @@ export const getConnection = async (req, connectionId) => {
  */
 export const handleConnection = async (req, connectionDetails) => {
     const connectionId = randomUUID();
-    const conn = cacheController.set(connectionId, JSON.stringify(connectionDetails));
+    const conn = await cacheController.set(connectionId, JSON.stringify(connectionDetails), undefined, redis);
 
     let dbHandler;
     switch (connectionDetails.type?.toLowerCase()) {
@@ -43,18 +44,18 @@ export const handleConnection = async (req, connectionDetails) => {
  * @param {string} connectionId 
  */
 export const setupConversation = async (req, connectionId) => {
-    const connection = cacheController.get(connectionId);
+    const connection = await cacheController.get(connectionId, redis);
     if(!connection) {
         throw new AppError('No connection found', '58');
     }
 
     const conversationId = randomUUID();
-    cacheController.set(`${connectionId}:${conversationId}`, JSON.stringify([
+    await cacheController.set(`${connectionId}:${conversationId}`, JSON.stringify([
         {
             role: 'system',
             content: SYSTEM_PROMPT
         }
-    ]));
+    ]), undefined, redis);
 
     return { conversationId };
 }
@@ -66,7 +67,7 @@ export const setupConversation = async (req, connectionId) => {
  * @param {string} query
  */
 export async function* handleConversation (req, connectionId, conversationId, query) {
-    let conversation = cacheController.get(`${connectionId}:${conversationId}`);
+    let conversation = await cacheController.get(`${connectionId}:${conversationId}`, redis);
     if(!conversation)
         throw new AppError('Invalid conversation', '58');
 
@@ -116,7 +117,7 @@ export async function* handleConversation (req, connectionId, conversationId, qu
         content: outputMessage
     });
 
-    cacheController.set(`${connectionId}:${conversationId}`, JSON.stringify(conversation));
+    await cacheController.set(`${connectionId}:${conversationId}`, JSON.stringify(conversation), undefined, redis);
     return JSON.stringify({ done: true });
 }
 

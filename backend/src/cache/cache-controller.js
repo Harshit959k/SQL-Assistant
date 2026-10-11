@@ -1,23 +1,23 @@
 import { inMemory } from "./in-memory.js";
 
 export const cacheController = {
-    get: (key, ctx = inMemory) => {
+    get: async (key, ctx = inMemory) => {
         try {
-            return ctx.get(key);
+            return await ctx.get(key);
         } catch (err) {
             console.log('Error in get ==>', err);
         }
     },
-    set: (key, value, ttl, ctx = inMemory) => {
+    set: async (key, value, ttl, ctx = inMemory) => {
         try {
-            return ctx.set(key, value, ttl);
+            return await ctx.set(key, value, ttl);
         } catch (err) {
             console.log('Error in set ==>', err);
         }
     },
-    del: (key, ctx = inMemory) => {
+    del: async (key, ctx = inMemory) => {
         try {
-            return ctx.delete(key);
+            return await ctx.delete(key);
         } catch (err) {
             console.log('Error in del ==>', err);
         }
