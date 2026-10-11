@@ -1,4 +1,5 @@
 import mysql2 from 'mysql2/promise';
+import { AppError } from '../utils/AppError';
 
 export class MySqlAdapter {
     constructor() {
@@ -18,6 +19,7 @@ export class MySqlAdapter {
             this.database = credentials.database;
         } catch (err) {
             console.log('Error while establishing connection ===>', err);
+            throw new AppError('Unable to connect to the database', '60');
         }
     }
 
@@ -40,6 +42,7 @@ export class MySqlAdapter {
             return { columns, relations };
         } catch (err) {
             console.log('Error while fetching schema ===>', err);
+            throw new AppError('Unable to parse the schema', '59');
         }
     }
 

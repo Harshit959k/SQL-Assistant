@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { AppError } from '../utils/AppError';
 
 const { Client } = pg;
 
@@ -27,6 +28,7 @@ export class PostgresAdapter {
             this.schema = schema || 'public';
         } catch (err) {
             console.log('Error while establishing connection ===>', err);
+            throw new AppError('Unable to connect to the database', '60');
         }
     }
 
@@ -71,11 +73,10 @@ export class PostgresAdapter {
                 [this.database, this.schema]
             );
 
-            console.log(columns);
-
             return { columns, relations };
         } catch (err) {
             console.log('Error while fetching schema ===>', err);
+            throw new AppError('Unable to parse the schema', '59');
         }
     }
 

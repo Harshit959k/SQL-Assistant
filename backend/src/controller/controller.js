@@ -88,7 +88,6 @@ export async function* handleConversation (req, connectionId, conversationId, qu
     });
 
     const constructedQuery = constructQuery(query, queryResult.points.map(elem => elem.payload.embeddingStr).join('\n\n'));
-console.log(constructedQuery);
     const llmClient = getClient();
     const response = await llmClient.chat.completions.create({
         model: "gemini-3.5-flash",
@@ -149,7 +148,6 @@ async function handleSql(req, connectionId, connectionDetails) {
     await connHandler.connect(toCredentials(type, connectionDetails));
     const result = await connHandler.getSchema();
     const schema = normalizeSchema(connectionId, result.columns, result.relations);
-console.log(connectionDetails, toCredentials(type, connectionDetails));
     const embedder = await getEmbedder();
     for(let record of schema) {
         const embedding = await embedder(record.embeddingStr, {
@@ -183,6 +181,8 @@ console.log(connectionDetails, toCredentials(type, connectionDetails));
             }
         })
     });
+
+    await connHandler.close();
 
     return { success: true };
 }
