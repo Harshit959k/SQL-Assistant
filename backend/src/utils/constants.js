@@ -1,5 +1,6 @@
 export const Databases = {
-    mysql: 'mysql'
+    mysql: 'mysql',
+    postgres: 'postgres'
 };
 
 export const SYSTEM_PROMPT = `

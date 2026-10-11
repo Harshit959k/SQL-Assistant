@@ -21,7 +21,9 @@
     "ioredis": "^6.0.0",
     "mysql2": "^3.23.2",
     "node-cache": "^5.1.2",
-    "openai": "^6.49.0"
+    "openai": "^6.49.0",
+    "pg": "^8.23.1",
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
