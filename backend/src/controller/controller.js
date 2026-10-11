@@ -1,6 +1,6 @@
 import { cacheController } from "../cache/cache-controller.js"
 import { randomUUID } from 'node:crypto';
-import { Databases, SYSTEM_PROMPT } from "../utils/constants.js";
+import { Databases, DEFAULT_TTL, SYSTEM_PROMPT } from "../utils/constants.js";
 import { MySqlAdapter } from "../connectors/mysql.js";
 import { constructQuery, normalizeSchema } from "../utils/utils.js";
 import { getEmbedder } from "../utils/embedder.js";
@@ -24,7 +24,7 @@ export const getConnection = async (req, connectionId) => {
  */
 export const handleConnection = async (req, connectionDetails) => {
     const connectionId = randomUUID();
-    const conn = await cacheController.set(connectionId, JSON.stringify(connectionDetails), undefined, redis);
+    await cacheController.set(connectionId, JSON.stringify(connectionDetails), undefined, redis);
 
     let dbHandler;
     switch (connectionDetails.type?.toLowerCase()) {
@@ -36,7 +36,7 @@ export const handleConnection = async (req, connectionDetails) => {
             throw new AppError('Invalid database type', '58');
     }
 
-    const result = await dbHandler(req, connectionId, connectionDetails);
+    await dbHandler(req, connectionId, connectionDetails);
 
     return { connectionId };
 }
@@ -48,7 +48,7 @@ export const handleConnection = async (req, connectionDetails) => {
 export const setupConversation = async (req, connectionId) => {
     const connection = await cacheController.get(connectionId, redis);
     if(!connection) {
-        throw new AppError('No connection found', '58');
+        throw new AppError('Connection not found', '58');
     }
 
     const conversationId = randomUUID();
@@ -57,7 +57,7 @@ export const setupConversation = async (req, connectionId) => {
             role: 'system',
             content: SYSTEM_PROMPT
         }
-    ]), undefined, redis);
+    ]), DEFAULT_TTL, redis);
 
     return { conversationId };
 }
@@ -71,7 +71,7 @@ export const setupConversation = async (req, connectionId) => {
 export async function* handleConversation (req, connectionId, conversationId, query) {
     let conversation = await cacheController.get(`${connectionId}:${conversationId}`, redis);
     if(!conversation)
-        throw new AppError('Invalid conversation', '58');
+        throw new AppError('Conversation not found or expired', '58');
 
     conversation = JSON.parse(conversation);
 
@@ -118,7 +118,7 @@ export async function* handleConversation (req, connectionId, conversationId, qu
         content: outputMessage
     });
 
-    await cacheController.set(`${connectionId}:${conversationId}`, JSON.stringify(conversation), undefined, redis);
+    await cacheController.set(`${connectionId}:${conversationId}`, JSON.stringify(conversation), DEFAULT_TTL, redis);
     return JSON.stringify({ done: true });
 }
 
