@@ -9,3 +9,4 @@ Do not guess.
 `;
 
 export const DEFAULT_TTL = 1200;
+export const EVAL_SLEEP_TIMER = 1000;

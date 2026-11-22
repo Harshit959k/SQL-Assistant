@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "nodemon app.js",
+    "run-evaluations": "node ./src/evals/initializer.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -23,9 +24,13 @@
     "node-cache": "^5.1.2",
     "openai": "^6.49.0",
     "pg": "^8.23.1",
-    "postgres": "^3.4.9"
+    "postgres": "^3.4.9",
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
+  },
+  "nodemonConfig": {
+    "ext": ".js,.mjs"
   }
 }

@@ -5,7 +5,7 @@ import { MySqlAdapter } from "../connectors/mysql.js";
 import { constructQuery, normalizeSchema } from "../utils/utils.js";
 import { getEmbedder } from "../utils/embedder.js";
 import { client } from "../database/qdrant.js";
-import { getClient } from "../llm/llm.js";
+import { query as queryLLM } from "../llm/llm.js";
 import { AppError } from "../utils/AppError.js";
 import { redis } from "../cache/redis.js";
 import { PostgresAdapter } from "../connectors/postgres.js";
@@ -88,18 +88,14 @@ export async function* handleConversation (req, connectionId, conversationId, qu
     });
 
     const constructedQuery = constructQuery(query, queryResult.points.map(elem => elem.payload.embeddingStr).join('\n\n'));
-    const llmClient = getClient();
-    const response = await llmClient.chat.completions.create({
-        model: "gemini-3.5-flash",
-        messages: [
-            ...conversation,
-            {
-                role: 'user',
-                content: constructedQuery
-            }
-        ],
-        stream: true
-    });
+    const messages = [
+        ...conversation,
+        {
+            role: 'user',
+            content: constructedQuery
+        }
+    ];
+    const response = await queryLLM(messages, true);
 
     let outputMessage = '';
     for await (let chunk of response) {
